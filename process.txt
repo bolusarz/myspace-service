@@ -1,0 +1,6 @@
+install prisma as dev dependency
+run (yarn|npx|pnpm) prisma init
+Setup db and enter url in env file
+Create tables in schema.prisma file
+run (yarn|npx|pnpm) prisma migrate dev --skip-generate
+install @prisma/client
