@@ -1,4 +1,9 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { UserDBService } from './userdb.service';
@@ -8,6 +13,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import _ from 'lodash';
 import { LoginDto } from './dto/login.dto';
 import * as jose from 'jose';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 const secret = new TextEncoder().encode(process.env.JWT_KEY);
 
@@ -56,5 +62,34 @@ export class UserService {
       throw new HttpException({ message: 'Invalid email or password' }, 400);
     }
     throw new HttpException({ message: 'Invalid email or password' }, 400);
+  }
+
+  async changePassword({
+    id,
+    oldPassword,
+    newPassword,
+  }: ChangePasswordDto & { id: number }): Promise<{ message: string }> {
+    console.log(id);
+    const user = await this.userDb.user({ id });
+    if (user) {
+      const isValid = await bcrypt.compare(oldPassword, user.password);
+      if (isValid) {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        const res = await this.userDb.updateUser({
+          where: { id },
+          data: { password: hashedPassword },
+        });
+        if (res) {
+          return { message: 'Password changed successfully' };
+        }
+        throw new HttpException(
+          { message: 'Unknown Error' },
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+      throw new HttpException({ message: 'Invalid password' }, 400);
+    }
+    throw new UnauthorizedException();
   }
 }
